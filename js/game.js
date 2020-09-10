@@ -5,6 +5,7 @@ var player;
 var bricks = [];
 var line;
 var lineOn = false;
+var container = {"x" : 0, "y" : 0, "width" : x, "height" : y};
 
 function startGame(){
 	gameScreen.start();
@@ -39,6 +40,7 @@ var itemRect = function(width, height, x, y, color){
   this.y = y;
   this.angle = 0;
   this.color = color;
+  this.gravitySpeed = 1;
   this.update = function(){
   	ctx = gameScreen.context;
   	ctx.save();
@@ -47,7 +49,64 @@ var itemRect = function(width, height, x, y, color){
   	ctx.fillStyle = this.color;
   	ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
   	ctx.restore();
-	}
+	};
+	this.move = function(){
+		if(this.y >= container.height - this.height / 2 - 5){
+			this.gravitySpeed = 0;
+		}else{
+				this.gravitySpeed = 1;
+		}
+		this.checkBricks();
+		if(!lineOn){
+			this.checkBounds();
+			this.y += this.gravitySpeed;
+		}else{
+			if(this.checkBounds()){
+				lineOn = false;
+			}
+		}
+	};
+	this.checkBounds = function(){
+		var ret = false;
+		if(this.x - this.width / 2 < container.x){
+			this.x += this.width / 2;
+			ret = true;
+		}
+		if(this.x + this.width / 2 > container.width){
+			this.x -= this.width / 2;
+			ret = true;
+		}
+		if(this.y - this.height / 2 < container.y ){
+			this.y += this.height / 2;
+			ret = true;
+		}
+		if(this.y + this.height / 2 > container.height){
+			this.y = container.height - this.height / 2 - 5;
+			ret = true;
+		}
+		return ret;
+	};
+	this.checkBricks = function(){
+		var ret = false;
+		bricks.forEach(function(brick){
+			if(calDist(this, brick) < step){
+				var ang = Math.atan2(this, brick);
+				if(this.y <= brick.y && Math.abs(this.x - brick.x) < step / 2){
+					console.log("HIT AND STOP");
+					this.gravitySpeed = 0;
+					this.y = brick.y - step;
+					ret = true;
+				}else{
+					lineOn = false;
+					console.log("HIT AND MOVE");
+					this.gravitySpeed = 1;
+					this.x = brick.x + (step * Math.cos(Math.PI - ang));
+					this.y = brick.y + (step * Math.sin(Math.PI - ang));
+				}
+			}
+		}.bind(this));
+		return ret;
+	};
 }
 
 var itemLine = function(beginX, beginY, endX, endY, color){
@@ -58,8 +117,8 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 	this.angle = Math.atan2(beginY - endY, beginX - endX);
 	this.startAngle = this.angle;
 	this.color = color;
-	this.distance = Math.pow(Math.pow(Math.abs(beginX-endX), 2) + 
-		Math.pow(Math.abs(beginY-endY), 2), 0.5);
+	this.distance = calDist({"x" :beginX, "y" :beginY}, 
+										{"x" : endX, "y" : endY})
 	this.update = function(){
 		this.angle += Math.PI / 180;
 		ctx = gameScreen.context;
@@ -81,6 +140,7 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 function ticker(){
 	gameScreen.clear();
 	player.update();
+	player.move();
 	bricks.forEach(function(brick){
 		brick.update();
 	});
@@ -135,6 +195,11 @@ function isIn(obj, pointX, pointY){
 
 function randomInt(min, max){
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function calDist(obj,obj1){
+	return Math.pow(Math.pow(Math.abs(obj.x-obj1.x), 2) + 
+		Math.pow(Math.abs(obj.y-obj1.y), 2), 0.5);
 }
 
 startGame();
