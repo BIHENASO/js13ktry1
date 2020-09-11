@@ -6,12 +6,14 @@ var bricks = [];
 var line;
 var lineOn = false;
 var container = {"x" : 0, "y" : 0, "width" : x, "height" : y};
+var back, replay, cw, ccw, jump;
 
 function startGame(){
 	gameScreen.start();
-	player = new itemRect(step, step, x * 0.5, y * 0.5, "#555555");
-	for(var i = 0; i < 20; i++){
-		bricks[i] = new itemRect(step, step, randomInt(step, x -step),
+	player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
+	for(var i = 0; i < 5; i++){
+		bricks[i] = new itemRect(1.5 * step, 1.5 * step, 
+											randomInt(1.5 * step, x - 1.5 * step),
 		randomInt(step, y - step), "#000000");
 	}
 }
@@ -31,6 +33,52 @@ var gameScreen = {
 	},
 	clear : function(){
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+	},
+	
+	stop : function(){
+		clearInterval(this.interval);
+		player = null;
+		line = null;
+		lineOn = false;
+		bricks = [];
+		this.clear();
+		this.context.font = 2 * step +"px Courier New";
+		this.context.strokeStyle = "#FF0000";
+		this.context.textAlign = "center";
+		this.context.strokeText("Game Over", container.width / 2, 
+			container.height / 2);
+		
+		this.context.strokeStyle = "#FF0000";
+		this.context.lineWidth = step / 4;
+		
+		replay = new Path2D();
+		replay.arc(container.width / 2 - 3 * step, 
+			container.height / 2 + 3 * step, step, Math.PI / 3, Math.PI * 2, false);
+		replay.moveTo(container.width / 2 - 2 * step,
+			container.height / 2 + 3 * step);
+		replay.lineTo(container.width / 2 - 2 * step,
+			container.height / 2 + 2 * step);
+		replay.moveTo(container.width / 2 - 2 * step - step / 8,
+			container.height / 2 + 3 * step - step / 8);
+		replay.lineTo(container.width / 2 - 3 * step + step / 8,
+			container.height / 2 + 3 * step - step / 8);
+		this.context.stroke(replay);
+		
+		back = new Path2D();
+		back.moveTo(container.width / 2 + 4 * step,
+		 container.height / 2 + 2 * step);
+		back.lineTo(container.width / 2 + 4 * step,
+		 container.height / 2 + 4 * step);
+		back.lineTo(container.width / 2 + 2 * step,
+		 container.height / 2 + 3 * step);
+		back.lineTo(container.width / 2 + 4.1 * step,
+		 container.height / 2 + 1.9 * step);
+		this.context.stroke(back);
+		
+		this.canvas.onpointerdown = dealGameOverPointerDown;
+		this.canvas.onpointermove = null;
+		this.canvas.onpointerup  = null;
+		this.canvas.pointerupoutside = null;
 	}
 }
 var itemRect = function(width, height, x, y, color){
@@ -51,11 +99,6 @@ var itemRect = function(width, height, x, y, color){
   	ctx.restore();
 	};
 	this.move = function(){
-		if(this.y >= container.height - this.height / 2 - 5){
-			this.gravitySpeed = 0;
-		}else{
-				this.gravitySpeed = 1;
-		}
 		this.checkBricks();
 		if(!lineOn){
 			this.checkBounds();
@@ -76,36 +119,25 @@ var itemRect = function(width, height, x, y, color){
 			this.x -= this.width / 2;
 			ret = true;
 		}
-		if(this.y - this.height / 2 < container.y ){
-			this.y += this.height / 2;
-			ret = true;
-		}
-		if(this.y + this.height / 2 > container.height){
-			this.y = container.height - this.height / 2 - 5;
-			ret = true;
-		}
 		return ret;
 	};
 	this.checkBricks = function(){
-		var ret = false;
 		bricks.forEach(function(brick){
-			if(calDist(this, brick) < step){
-				var ang = Math.atan2(this, brick);
-				if(this.y <= brick.y && Math.abs(this.x - brick.x) < step / 2){
+			if(calDist(this, brick) < this.width){
+				lineOn= false;
+				if(this.y <= brick.y && Math.abs(this.x - brick.x) < 3 * this.width / 4){
 					console.log("HIT AND STOP");
+					this.y = brick.y - this.width;
 					this.gravitySpeed = 0;
-					this.y = brick.y - step;
-					ret = true;
 				}else{
-					lineOn = false;
 					console.log("HIT AND MOVE");
+					var ang = Math.atan2(brick.y - this.y, brick.x - this.x);
+					this.x = this.x + (2 * Math.cos(Math.PI + ang));
+					this.y = this.y + (2 * Math.sin(Math.PI + ang));
 					this.gravitySpeed = 1;
-					this.x = brick.x + (step * Math.cos(Math.PI - ang));
-					this.y = brick.y + (step * Math.sin(Math.PI - ang));
 				}
 			}
 		}.bind(this));
-		return ret;
 	};
 }
 
@@ -118,11 +150,13 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 	this.startAngle = this.angle;
 	this.color = color;
 	this.distance = calDist({"x" :beginX, "y" :beginY}, 
-										{"x" : endX, "y" : endY})
+										{"x" : endX, "y" : endY});
+	this.moveFactor = this.startAnle > 0 ? 1 : -1
 	this.update = function(){
-		this.angle += Math.PI / 180;
+		this.angle += this.moveFactor * Math.PI / 180;
 		ctx = gameScreen.context;
 		ctx.beginPath();
+		console.log(this.startAngle)
 		var nX = this.endX + this.distance * Math.cos(this.angle);
 		var nY = this.endY + this.distance * Math.sin(this.angle)
 		ctx.moveTo(nX, nY);
@@ -131,21 +165,22 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 		player.y = nY + (player.height * 0.5) * Math.sin(this.angle);
 		ctx.closePath();
 		ctx.stroke();
-		if(Math.abs(this.angle - this.startAngle) >= 2 * Math.PI / 3){
-			lineOn = false;
-		}
 	}
 }
 
 function ticker(){
-	gameScreen.clear();
-	player.update();
-	player.move();
-	bricks.forEach(function(brick){
-		brick.update();
-	});
-	if(lineOn){
-		line.update();
+	if(player.y + player.height / 2 > container.height){
+		gameScreen.stop();
+	}else{
+		gameScreen.clear();
+		player.update();
+		player.move();
+		bricks.forEach(function(brick){
+			brick.update();
+		});
+		if(lineOn){
+			line.update();
+		}
 	}
 }
 
@@ -157,7 +192,13 @@ function dealPointerDown(event){
 		this.beginX = pointX;
 		this.beginY = pointY;
 		this.stat = "line event";
-		console.log("BEGIN", this.beginX, this.beginY);
+	}else{
+		if(!player.gravitySpeed){
+			player.y -=  2 * step;
+			player.gravitySpeed = 1;
+		}else if(lineOn){
+			lineOn = false;
+		}
 	}
 }
 function dealPointerMove(event){
@@ -178,9 +219,22 @@ function dealPointerUp(event){
 				line = new itemLine(this.beginX, this.beginY, this.endX, this.endY);
 			}
 		}.bind(this));
-		console.log("END", this.endX, this.endY);
 	}
 	this.stat = null;
+}
+
+function dealGameOverPointerDown(event){
+	this.isDown = true;
+	var pointX = event.pageX;
+	var pointY = event.pageY;	
+	if(gameScreen.context.isPointInStroke(replay, pointX, pointY)){
+		gameScreen.clear();
+		back = null;
+		replay = null;
+		startGame();
+	}else if(gameScreen.context.isPointInStroke(back, pointX, pointY)){
+		window.location.assign("../index.html");
+	}
 }
 
 function isIn(obj, pointX, pointY){
