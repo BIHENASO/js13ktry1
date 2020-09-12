@@ -196,7 +196,7 @@ var itemRect = function(width, height, x, y, color, type = "player"){
 		}.bind(this));
 	};
 	this.scoreCount = function(){
-		if(this.y > y * 0.67) score--;
+		if(this.y > window.y * 0.67) score--;
 		else score++;
 	};
 }
