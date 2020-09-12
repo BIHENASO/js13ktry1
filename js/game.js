@@ -1,10 +1,14 @@
 var x = window.innerWidth;
 var y = window.innerHeight;
 var step = x > y ? y * 0.05 : x * 0.05;
+var BIHENASO = {"maxScore" : 0};
+if(!localStorage.getItem("BIHENASO")) localStorage.setItem("BIHENASO", JSON.stringify(BIHENASO)); 
+
 var player;
 var bricks = [];
 var line;
 var lineOn = false;
+var maxScoreOn = false;
 var container = {"x" : 0, "y" : 0, "width" : x, "height" : y};
 var back, replay;
 var score = 0;
@@ -12,6 +16,22 @@ var scoreText;
 var screen = 1;
 var screenText;
 var itemID = 0;
+var maxScore = JSON.parse(localStorage.getItem("BIHENASO")).maxScore;
+var maxScoreText;
+var instr = ["To play click grey square",
+						 "and line to blue square.",
+						 "To see high score click grey square",
+						 "and line to blue square.",
+						 "Wait for grey squares",
+						 "to turn 90 degrees.",
+						 "If you want to stop its turn,", 
+						 "just click the screen.",
+						 "These will help you",
+						 "while playing."	
+						];
+var instrText = [];
+var xSpace = x - step * 17 >= 0 ? (x - step * 17) / 2 : 0;
+
 function slideScreen() {
 	if(line){
 		line.beginY += y/3;
@@ -33,22 +53,36 @@ function slideScreen() {
 	}
 }
 
-function startGame(){
-	gameScreen.start();
-	player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
-	player.scoreInterval = setInterval(function(){score--;}, 10000); 
-	for(var i = 0; i < 5; i++){
-		bricks[i] = new itemRect(1.5 * step, 1.5 * step, 
-											randomInt(1.5 * step, x - 1.5 * step),
-		randomInt(step, y - step), "#000000", "brick");
+function startGame(type = 0){
+	gameScreen.start(type);
+	if(type == 0){
+		player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
+		bricks[0] = new itemRect(1.5 * step, 1.5 * step, x * 0.3, y * 0.4, "#555555", "enemy", -1);
+		bricks[1] = new itemRect(1.5 * step, 1.5 * step, x * 0.7, y * 0.4, "#555555", "enemy", 1);
+		bricks[0].stat = "h";
+		bricks[1].stat = "p";
+		screenText = new itemRect(step, "Courier New", x * 0.2, y * 0.3, "#555555", "text");
+		scoreText = new itemRect(step, "Courier New", x * 0.65, y * 0.3, "#555555", "text");
+		maxScoreText = new itemRect(step, "Courier New", x * 0.29, y * 0.35, "#FF0000", "text");
+		for(var i = 0; i < instr.length; i++){
+			instrText[i] = new itemRect(step * 0.8, "Courier New", xSpace, y * 0.5 + i * step, "#000000", "text");
+		}
+	}else if(type == 1){
+		player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
+		player.scoreInterval = setInterval(function(){score--;}, 1000); 
+		for(var i = 0; i < 5; i++){
+			bricks[i] = new itemRect(1.5 * step, 1.5 * step, randomInt(1.5 * step, x - 1.5 * step),
+			randomInt(step, y - step), "#000000", "brick");
+		}
+		screenText = new itemRect(step, "Courier New", x - 6.2 * step, step, "#555555", "text");
+		scoreText = new itemRect(step, "Courier New", step / 5, step, "#555555", "text");
 	}
-	screenText = new itemRect(step, "Courier New", x - 6.2 * step, step, "#555555", "text");
-	scoreText = new itemRect(step, "Courier New", step / 5, step, "#555555", "text");
 }
 
 var gameScreen = {
 	canvas : document.createElement("canvas"),
-	start  : function(){
+	start  : function(type){
+		this.type = type;
 		this.canvas.width = x;
 		this.canvas.height = y;
 		this.canvas.onpointerdown = dealPointerDown;
@@ -57,7 +91,7 @@ var gameScreen = {
 		this.canvas.pointerupoutside = dealPointerUp;
 		this.context = this.canvas.getContext("2d");
 		document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-		this.interval = setInterval(ticker, 17);
+		this.interval = type == 0 ? setInterval(ticker, 17) : setInterval(ticker1, 17);
 	},
 	clear : function(){
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -113,7 +147,7 @@ var gameScreen = {
 		this.canvas.pointerupoutside = null;
 	},
 }
-var itemRect = function(width, height, x, y, color, type = "player"){
+var itemRect = function(width, height, x, y, color, type = "player", rotator = null){
   this.width = width;
   this.height = height;
   this.x = x;
@@ -122,8 +156,8 @@ var itemRect = function(width, height, x, y, color, type = "player"){
   this.angle = 0;
   this.color = color;
   this.gravitySpeed = 1;
-  this.rotator = randomInt(0, 10) % 2 == 0 ? -1 : 1;
-  this.bonusStatus = randomInt(0,5) % 3 == 0 ? 1 : 0;
+  this.rotator = rotator == null ? (randomInt(0, 10) % 2 == 0 ? -1 : 1) : rotator;
+  this.bonusStatus = rotator == null ? (randomInt(0,5) % 3 == 0 ? 1 : 0) : 0;
   this.update = function(){
   	ctx = gameScreen.context;
   	if(type == "text"){
@@ -223,13 +257,31 @@ var itemLine = function(beginX, beginY, endX, endY, color, rotatorBrick){
 		player.y = this.nY + (player.height * 0.5) * Math.sin(this.angle);
 		ctx.closePath();
 		ctx.stroke();
-		if(rotatorBrick.bonusStatus == 1 && Math.abs(this.startAngle-this.angle) > Math.PI / 3){
-			lineOn = false;
-			gameScreen.context.clearRect(rotatorBrick.width / -2, rotatorBrick.height / -2, rotatorBrick.width, rotatorBrick.height);
-			bricks = bricks.filter(function(b){
-				if(b.id == rotatorBrick.id) return false;
-				else return true;
-			}.bind(rotatorBrick));			
+		if(gameScreen.type == 0){
+			if(Math.abs(this.startAngle-this.angle) > Math.PI / 2 && rotatorBrick.stat == "p"){
+				clearInterval(gameScreen.interval);
+				clearInterval(player.scoreInterval);
+				player = null;
+				lineOn = false;
+				line = null;
+				bricks = [];
+				instrText = [];
+				maxScoreOn = false;
+				maxScoreText = null;
+				gameScreen.clear();
+				startGame(1);		
+			}else if(Math.abs(this.startAngle-this.angle) > Math.PI / 2 && rotatorBrick.stat == "h"){
+				maxScoreOn = true;
+			}
+		}else{
+			if(rotatorBrick.bonusStatus == 1 && Math.abs(this.startAngle-this.angle) > Math.PI / 3){
+				lineOn = false;
+				gameScreen.context.clearRect(rotatorBrick.width / -2, rotatorBrick.height / -2, rotatorBrick.width, rotatorBrick.height);
+				bricks = bricks.filter(function(b){
+					if(b.id == rotatorBrick.id) return false;
+					else return true;
+				}.bind(rotatorBrick));			
+			}
 		}
 	}
 	
@@ -266,6 +318,35 @@ var itemLine = function(beginX, beginY, endX, endY, color, rotatorBrick){
 }
 
 function ticker(){
+	if(player.y + player.height / 2 > container.height){
+		player.y = y * 0.5;
+		player.x = x * 0.5;
+	}else{
+		gameScreen.clear();
+		player.update();
+		player.move();
+		if(maxScoreOn){
+			maxScoreText.text = maxScore;
+			maxScoreText.update();
+		}
+		instrText.forEach(function(l,i){
+			l.text = instr[i];
+			l.update();
+		}); 
+		screenText.text = "HIGH SCORE";
+		screenText.update();
+		scoreText.text  = "PLAY"; 
+		scoreText.update();
+		bricks.forEach(function(brick){
+			brick.update();
+		});
+		if(lineOn){
+			line.update();
+		}
+	}
+}
+
+function ticker1(){
 	if (player.y < y/3) {
 		slideScreen();
 		screen++;
@@ -341,9 +422,9 @@ function dealGameOverPointerDown(event){
 		gameScreen.clear();
 		back = null;
 		replay = null;
-		startGame();
+		startGame(1);
 	}else if(gameScreen.context.isPointInStroke(back, pointX, pointY)){
-		window.location.assign("../index.html");
+		startGame();
 	}
 }
 
