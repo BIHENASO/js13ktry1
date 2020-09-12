@@ -8,6 +8,25 @@ var lineOn = false;
 var container = {"x" : 0, "y" : 0, "width" : x, "height" : y};
 var back, replay, cw, ccw, jump;
 
+function slideScreen() {
+	console.log("Slide");
+	console.log(line);
+	line.beginY += y/3;
+	line.endY += y/3;
+	player.y += y/3;
+	bricks = bricks.filter(function(brick){
+		if (brick.y > y*0.67) {
+			return false;
+		} else {
+			brick.y += y/3;
+			return true;
+		}
+	});
+	for (var i = 0; i < 2; i++) {
+		bricks.push(new itemRect(1.5 * step, 1.5 * step, randomInt(1.5 * step, x - 1.5 * step), randomInt(step, y/3 - step), "#000000"));
+	}
+}
+
 function startGame(){
 	gameScreen.start();
 	player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
@@ -169,6 +188,9 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 }
 
 function ticker(){
+	if (player.y < y/3) {
+		slideScreen();
+	}
 	if(player.y + player.height / 2 > container.height){
 		gameScreen.stop();
 	}else{
