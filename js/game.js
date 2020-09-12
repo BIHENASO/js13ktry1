@@ -134,13 +134,71 @@ var itemRect = function(width, height, x, y, color, type = "player"){
   	  ctx.save();
   		ctx.translate(this.x, this.y);
   		ctx.rotate(this.angle);
-  		if(type == "player")
-  			ctx.fillStyle = this.color;
-  		else{
-  			ctx.fillStyle = this.rotator < 0 ? "#00FF00" : "#0000FF";
-  			ctx.fillStyle = this.bonusStatus == 1 ? "#FF0000" : ctx.fillStyle;
-  			}
-  		ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+  		ctx.lineWidth = step / 4;
+  		if(type == "player") {
+  			ctx.strokeStyle = this.color;
+  			ctx.fillStyle = "#FFFF00";
+  			ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+  		}
+  		else if (this.bonusStatus == 1) {
+			ctx.strokeStyle = "#FF0000";
+			var p = new Path2D();
+			
+			p.moveTo(-0.25*step,-0.4*step);
+			p.lineTo(-0.25*step,0.4*step);
+			p.moveTo(-0.15*step,-0.35*step);
+			p.lineTo(-0.55*step,-0.15*step);
+			p.moveTo(-0.35*step,-0.35*step);
+			p.lineTo(0.05*step,-0.15*step);
+			
+			p.moveTo(0.25*step,-0.4*step);
+			p.lineTo(0.25*step,0.4*step);
+			p.moveTo(0.15*step,-0.35*step);
+			p.lineTo(0.55*step,-0.15*step);
+			p.moveTo(0.35*step,-0.35*step);
+			p.lineTo(-0.05*step,-0.15*step);
+			
+			ctx.stroke(p);
+		} else if (this.rotator < 0) {
+			ctx.strokeStyle = "#00FF00";
+			var p = new Path2D();
+			
+			p.moveTo(-0.25*step,0.4*step);
+			p.lineTo(-0.25*step,-0.4*step);
+			p.moveTo(-0.15*step,0.35*step);
+			p.lineTo(-0.55*step,0.15*step);
+			p.moveTo(-0.35*step,0.35*step);
+			p.lineTo(0.05*step,0.15*step);
+			
+			p.moveTo(0.25*step,-0.4*step);
+			p.lineTo(0.25*step,0.4*step);
+			p.moveTo(0.15*step,-0.35*step);
+			p.lineTo(0.55*step,-0.15*step);
+			p.moveTo(0.35*step,-0.35*step);
+			p.lineTo(-0.05*step,-0.15*step);
+			
+			ctx.stroke(p);
+		} else {
+			ctx.strokeStyle = "#0000FF";
+			var p = new Path2D();
+			
+			p.moveTo(-0.25*step,-0.4*step);
+			p.lineTo(-0.25*step,0.4*step);
+			p.moveTo(-0.15*step,-0.35*step);
+			p.lineTo(-0.55*step,-0.15*step);
+			p.moveTo(-0.35*step,-0.35*step);
+			p.lineTo(0.05*step,-0.15*step);
+			
+			p.moveTo(0.25*step,0.4*step);
+			p.lineTo(0.25*step,-0.4*step);
+			p.moveTo(0.15*step,0.35*step);
+			p.lineTo(0.55*step,0.15*step);
+			p.moveTo(0.35*step,0.35*step);
+			p.lineTo(-0.05*step,0.15*step);
+			
+			ctx.stroke(p);
+		}
+  		ctx.strokeRect(this.width / -2+ctx.lineWidth/2, this.height / -2+ctx.lineWidth/2, this.width-ctx.lineWidth, this.height-ctx.lineWidth);
   		ctx.restore();
   	}
 	};
