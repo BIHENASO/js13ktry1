@@ -6,11 +6,17 @@ var bricks = [];
 var line;
 var lineOn = false;
 var container = {"x" : 0, "y" : 0, "width" : x, "height" : y};
-var back, replay, cw, ccw, jump;
-
+var back, replay;
+var score = 0;
+var scoreText;
+var screen = 1;
+var screenText;
+var itemID = 0;
 function slideScreen() {
-	line.beginY += y/3;
-	line.endY += y/3;
+	if(line){
+		line.beginY += y/3;
+		line.endY += y/3;
+	}
 	player.y += y/3;
 	bricks = bricks.filter(function(brick){
 		if (brick.y > y*0.67) {
@@ -21,7 +27,9 @@ function slideScreen() {
 		}
 	});
 	for (var i = 0; i < 2; i++) {
-		bricks.push(new itemRect(1.5 * step, 1.5 * step, randomInt(1.5 * step, x - 1.5 * step), randomInt(step, y/3 - step), "#000000"));
+		bricks.push(new itemRect(1.5 * step, 1.5 * step, 
+			randomInt(1.5 * step, x - 1.5 * step), 
+			randomInt(step, y/3 - step), "#000000", "brick"));
 	}
 }
 
@@ -31,8 +39,10 @@ function startGame(){
 	for(var i = 0; i < 5; i++){
 		bricks[i] = new itemRect(1.5 * step, 1.5 * step, 
 											randomInt(1.5 * step, x - 1.5 * step),
-		randomInt(step, y - step), "#000000");
+		randomInt(step, y - step), "#000000", "brick");
 	}
+	screenText = new itemRect(step, "Courier New", x - 6.2 * step, step, "#555555", "text");
+	scoreText = new itemRect(step, "Courier New", step / 5, step, "#555555", "text");
 }
 
 var gameScreen = {
@@ -52,17 +62,20 @@ var gameScreen = {
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	},
 	
-	stop : function(){
+	stop : function(status = 0){
 		clearInterval(this.interval);
 		player = null;
 		line = null;
 		lineOn = false;
 		bricks = [];
+		screen = 1;
+		score = 0;
+		var st = status > 0 ? "404 NOT FOUND" : "GAME OVER";
 		this.clear();
 		this.context.font = 2 * step +"px Courier New";
 		this.context.strokeStyle = "#FF0000";
 		this.context.textAlign = "center";
-		this.context.strokeText("Game Over", container.width / 2, 
+		this.context.strokeText(st, container.width / 2, 
 			container.height / 2);
 		
 		this.context.strokeStyle = "#FF0000";
@@ -96,24 +109,38 @@ var gameScreen = {
 		this.canvas.onpointermove = null;
 		this.canvas.onpointerup  = null;
 		this.canvas.pointerupoutside = null;
-	}
+	},
 }
-var itemRect = function(width, height, x, y, color){
+var itemRect = function(width, height, x, y, color, type = "player"){
   this.width = width;
   this.height = height;
   this.x = x;
   this.y = y;
+  this.id = itemID++;
   this.angle = 0;
   this.color = color;
   this.gravitySpeed = 1;
+  this.rotator = randomInt(0, 10) % 2 == 0 ? -1 : 1;
+  this.bonusStatus = randomInt(0,5) % 3 == 0 ? 1 : 0; 
   this.update = function(){
   	ctx = gameScreen.context;
-  	ctx.save();
-  	ctx.translate(this.x, this.y);
-  	ctx.rotate(this.angle);
-  	ctx.fillStyle = this.color;
-  	ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
-  	ctx.restore();
+  	if(type == "text"){
+  		ctx.font = this.width +"px " + this.height;
+  		ctx.fillStyle = this.color;
+  		ctx.fillText(this.text, this.x, this.y)
+  	}else{
+  	  ctx.save();
+  		ctx.translate(this.x, this.y);
+  		ctx.rotate(this.angle);
+  		if(type == "player")
+  			ctx.fillStyle = this.color;
+  		else{
+  			ctx.fillStyle = this.rotator < 0 ? "#00FF00" : "#0000FF";
+  			ctx.fillStyle = this.bonusStatus == 1 ? "#FF0000" : ctx.fillStyle;
+  			}
+  		ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+  		ctx.restore();
+  	}
 	};
 	this.move = function(){
 		this.checkBricks();
@@ -142,12 +169,24 @@ var itemRect = function(width, height, x, y, color){
 		bricks.forEach(function(brick){
 			if(calDist(this, brick) < this.width){
 				lineOn= false;
-				if(this.y <= brick.y && Math.abs(this.x - brick.x) < 3 * this.width / 4){
-					//console.log("HIT AND STOP");
-					this.y = brick.y - this.width;
-					this.gravitySpeed = 0;
+				if(this.y <= brick.y && 
+					Math.abs(this.x - brick.x) < 3 * this.width / 4){
+					if(brick.bonusStatus == 1){
+						var rnd = randomInt(0,10);
+						if(rnd % 7 == 0){
+							this.y -= y;
+						}else{
+							gameScreen.context.clearRect(brick.width / -2, brick.height / -2, brick.width, brick.height);
+							bricks = bricks.filter(function(b){
+								if(b.id == brick.id) return false;
+								else return true;
+							}.bind(brick));
+						}
+					}else{
+						this.y = brick.y - this.width;
+						this.gravitySpeed = 0;
+					}
 				}else{
-					//console.log("HIT AND MOVE");
 					var ang = Math.atan2(brick.y - this.y, brick.x - this.x);
 					this.x = this.x + (2 * Math.cos(Math.PI + ang));
 					this.y = this.y + (2 * Math.sin(Math.PI + ang));
@@ -156,9 +195,13 @@ var itemRect = function(width, height, x, y, color){
 			}
 		}.bind(this));
 	};
+	this.scoreCount = function(){
+		if(this.y > y * 0.67) score--;
+		else score++;
+	};
 }
 
-var itemLine = function(beginX, beginY, endX, endY, color){
+var itemLine = function(beginX, beginY, endX, endY, color, rotatorBrick){
 	this.beginX = beginX;
 	this.beginY = beginY;
 	this.nX = beginX;
@@ -170,12 +213,11 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 	this.color = color;
 	this.distance = calDist({"x" :beginX, "y" :beginY}, 
 										{"x" : endX, "y" : endY});
-	this.moveFactor = this.startAnle > 0 ? 1 : -1
+	this.moveFactor = rotatorBrick.rotator;
 	this.update = function(){
 		this.angle += this.moveFactor * Math.PI / 180;
 		ctx = gameScreen.context;
 		ctx.beginPath();
-		//console.log(this.startAngle)
 		this.nX = this.endX + this.distance * Math.cos(this.angle);
 		this.nY = this.endY + this.distance * Math.sin(this.angle)
 		ctx.moveTo(this.nX, this.nY);
@@ -184,6 +226,14 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 		player.y = this.nY + (player.height * 0.5) * Math.sin(this.angle);
 		ctx.closePath();
 		ctx.stroke();
+		if(rotatorBrick.bonusStatus == 1 && Math.abs(this.startAngle-this.angle) > Math.PI / 3){
+			lineOn = false;
+			gameScreen.context.clearRect(rotatorBrick.width / -2, rotatorBrick.height / -2, rotatorBrick.width, rotatorBrick.height);
+			bricks = bricks.filter(function(b){
+				if(b.id == rotatorBrick.id) return false;
+				else return true;
+			}.bind(rotatorBrick));			
+		}
 	}
 	
 	this.colCheck = function() {
@@ -221,13 +271,21 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 function ticker(){
 	if (player.y < y/3) {
 		slideScreen();
+		screen++;
 	}
 	if(player.y + player.height / 2 > container.height){
 		gameScreen.stop();
+	}else if(screen >= 404){
+		gameScreen.stop(1);
 	}else{
 		gameScreen.clear();
 		player.update();
 		player.move();
+		player.scoreCount();
+		screenText.text = "SCREEN " + formatScreen();
+		screenText.update();
+		scoreText.text  = "SCORE> " + score; 
+		scoreText.update();
 		bricks.forEach(function(brick){
 			brick.update();
 		});
@@ -270,7 +328,7 @@ function dealPointerUp(event){
 		bricks.forEach(function(brick){
 			if(isIn(brick, this.endX, this.endY)){
 				lineOn = true;
-				line = new itemLine(this.beginX, this.beginY, this.endX, this.endY);
+				line = new itemLine(this.beginX, this.beginY, this.endX, this.endY, "#000000", brick);
 			}
 		}.bind(this));
 	}
@@ -308,6 +366,18 @@ function randomInt(min, max){
 function calDist(obj,obj1){
 	return Math.pow(Math.pow(Math.abs(obj.x-obj1.x), 2) + 
 		Math.pow(Math.abs(obj.y-obj1.y), 2), 0.5);
+}
+function formatScreen(){
+	var ret;
+	if(screen >= 100) ret = screen.toSring();
+	else if(screen < 100 && screen >= 10){
+		ret = "0"; 
+		ret += screen.toString();
+	}else{
+		ret = "00";
+		ret += screen.toString();
+	}
+	return ret;
 }
 
 startGame();
