@@ -9,8 +9,6 @@ var container = {"x" : 0, "y" : 0, "width" : x, "height" : y};
 var back, replay, cw, ccw, jump;
 
 function slideScreen() {
-	console.log("Slide");
-	console.log(line);
 	line.beginY += y/3;
 	line.endY += y/3;
 	player.y += y/3;
@@ -145,11 +143,11 @@ var itemRect = function(width, height, x, y, color){
 			if(calDist(this, brick) < this.width){
 				lineOn= false;
 				if(this.y <= brick.y && Math.abs(this.x - brick.x) < 3 * this.width / 4){
-					console.log("HIT AND STOP");
+					//console.log("HIT AND STOP");
 					this.y = brick.y - this.width;
 					this.gravitySpeed = 0;
 				}else{
-					console.log("HIT AND MOVE");
+					//console.log("HIT AND MOVE");
 					var ang = Math.atan2(brick.y - this.y, brick.x - this.x);
 					this.x = this.x + (2 * Math.cos(Math.PI + ang));
 					this.y = this.y + (2 * Math.sin(Math.PI + ang));
@@ -163,6 +161,8 @@ var itemRect = function(width, height, x, y, color){
 var itemLine = function(beginX, beginY, endX, endY, color){
 	this.beginX = beginX;
 	this.beginY = beginY;
+	this.nX = beginX;
+	this.nY = beginY;
 	this.endX = endX;
 	this.endY = endY;
 	this.angle = Math.atan2(beginY - endY, beginX - endX);
@@ -175,15 +175,46 @@ var itemLine = function(beginX, beginY, endX, endY, color){
 		this.angle += this.moveFactor * Math.PI / 180;
 		ctx = gameScreen.context;
 		ctx.beginPath();
-		console.log(this.startAngle)
-		var nX = this.endX + this.distance * Math.cos(this.angle);
-		var nY = this.endY + this.distance * Math.sin(this.angle)
-		ctx.moveTo(nX, nY);
+		//console.log(this.startAngle)
+		this.nX = this.endX + this.distance * Math.cos(this.angle);
+		this.nY = this.endY + this.distance * Math.sin(this.angle)
+		ctx.moveTo(this.nX, this.nY);
 		ctx.lineTo(this.endX, this.endY);
-		player.x = nX + (player.width * 0.5) * Math.cos(this.angle);
-		player.y = nY + (player.height * 0.5) * Math.sin(this.angle);
+		player.x = this.nX + (player.width * 0.5) * Math.cos(this.angle);
+		player.y = this.nY + (player.height * 0.5) * Math.sin(this.angle);
 		ctx.closePath();
 		ctx.stroke();
+	}
+	
+	this.colCheck = function() {
+		var x = Math.min(this.nX,this.endX);
+		var y = Math.min(this.nY,this.endY);
+		var w = Math.abs(this.endX - this.nX);
+		var h = Math.abs(this.endY - this.nY);
+		
+		var bX;
+		var bY;
+		bricks.forEach(function(brick){
+			bX = brick.x - brick.width/2;
+			bY = brick.y - brick.height/2;
+			if (this.endX > bX + brick.width
+					|| this.endX < bX
+					|| this.endY > bY + brick.height
+					|| this.endY < bY) {
+				if (x < bX + brick.width
+						&& x + w > bX
+						&& y < bY + brick.height
+						&& y + h > bY) {
+					var angle = Math.atan2(this.endY-this.nY,this.endX-this.nX);
+					var type = Math.atan2(this.endY-bY,this.endX-bX) > angle;
+					if ( ( (Math.atan2(this.endY-(bY+brick.height),this.endX-(bX+brick.width)) > angle) != type )
+							|| ( (Math.atan2(this.endY-bY,this.endX-(bX+brick.width)) > angle) != type )
+							|| ( (Math.atan2(this.endY-(bY+brick.height),this.endX-bX) > angle) != type ) ) {
+						lineOn = false;
+					}
+				}
+			}
+		},this);
 	}
 }
 
@@ -202,6 +233,7 @@ function ticker(){
 		});
 		if(lineOn){
 			line.update();
+			line.colCheck();
 		}
 	}
 }
