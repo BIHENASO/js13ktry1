@@ -36,6 +36,7 @@ function slideScreen() {
 function startGame(){
 	gameScreen.start();
 	player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
+	player.scoreInterval = setInterval(function(){score--;}, 10000); 
 	for(var i = 0; i < 5; i++){
 		bricks[i] = new itemRect(1.5 * step, 1.5 * step, 
 											randomInt(1.5 * step, x - 1.5 * step),
@@ -64,6 +65,7 @@ var gameScreen = {
 	
 	stop : function(status = 0){
 		clearInterval(this.interval);
+		clearInterval(player.scoreInterval);
 		player = null;
 		line = null;
 		lineOn = false;
@@ -121,7 +123,7 @@ var itemRect = function(width, height, x, y, color, type = "player"){
   this.color = color;
   this.gravitySpeed = 1;
   this.rotator = randomInt(0, 10) % 2 == 0 ? -1 : 1;
-  this.bonusStatus = randomInt(0,5) % 3 == 0 ? 1 : 0; 
+  this.bonusStatus = randomInt(0,5) % 3 == 0 ? 1 : 0;
   this.update = function(){
   	ctx = gameScreen.context;
   	if(type == "text"){
@@ -193,10 +195,6 @@ var itemRect = function(width, height, x, y, color, type = "player"){
 				}
 			}
 		}.bind(this));
-	};
-	this.scoreCount = function(){
-		if(this.y > window.y * 0.67) score--;
-		else score++;
 	};
 }
 
@@ -271,6 +269,7 @@ function ticker(){
 	if (player.y < y/3) {
 		slideScreen();
 		screen++;
+		score += 100;
 	}
 	if(player.y + player.height / 2 > container.height){
 		gameScreen.stop();
@@ -280,7 +279,6 @@ function ticker(){
 		gameScreen.clear();
 		player.update();
 		player.move();
-		player.scoreCount();
 		screenText.text = "SCREEN " + formatScreen();
 		screenText.update();
 		scoreText.text  = "SCORE> " + score; 
@@ -369,7 +367,7 @@ function calDist(obj,obj1){
 }
 function formatScreen(){
 	var ret;
-	if(screen >= 100) ret = screen.toSring();
+	if(screen >= 100) ret = screen.toString();
 	else if(screen < 100 && screen >= 10){
 		ret = "0"; 
 		ret += screen.toString();
