@@ -190,7 +190,6 @@ var itemRect = function(width, height, x, y, color, type = "player"){
 					var ang = Math.atan2(brick.y - this.y, brick.x - this.x);
 					this.x = this.x + (2 * Math.cos(Math.PI + ang));
 					this.y = this.y + (2 * Math.sin(Math.PI + ang));
-					this.gravitySpeed = 1;
 				}
 			}
 		}.bind(this));
@@ -328,6 +327,7 @@ function dealPointerUp(event){
 		bricks.forEach(function(brick){
 			if(isIn(brick, this.endX, this.endY)){
 				lineOn = true;
+				player.gravitySpeed = 1;
 				line = new itemLine(this.beginX, this.beginY, this.endX, this.endY, "#000000", brick);
 			}
 		}.bind(this));
