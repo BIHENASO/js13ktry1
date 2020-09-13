@@ -16,7 +16,8 @@ var scoreText;
 var screen = 1;
 var screenText;
 var itemID = 0;
-var maxScore = JSON.parse(localStorage.getItem("BIHENASO")).maxScore;
+var lsObj = JSON.parse(localStorage.getItem("BIHENASO"));
+var maxScore = lsObj.maxScore;
 var maxScoreText;
 var instr = ["To play click falling square",
 						 "and line to blue square.",
@@ -46,10 +47,14 @@ function slideScreen() {
 			return true;
 		}
 	});
-	for (var i = 0; i < 2; i++) {
-		bricks.push(new itemRect(1.5 * step, 1.5 * step, 
-			randomInt(1.5 * step, x - 1.5 * step), 
-			randomInt(step, y/3 - step), "#000000", "brick"));
+	for (var i = 0; i < 3; i++) {
+		var locObj = utilGenerateLoc(bricks);
+		var br;
+		if(locObj)
+			br = new itemRect(1.5 * step, 1.5 * step, locObj.x, locObj.y, "#000000", "brick");
+		else
+			br = new itemRect(1.5 * step, 1.5 * step, randomInt(1.5 * step, x - 1.5 * step), randomInt(step, y - step), "#000000", "brick");
+		bricks.push(br);
 	}
 }
 
@@ -70,9 +75,12 @@ function startGame(type = 0){
 	}else if(type == 1){
 		player = new itemRect(1.5 * step, 1.5 * step, x * 0.5, y * 0.5, "#555555");
 		player.scoreInterval = setInterval(function(){score--;}, 1000); 
-		for(var i = 0; i < 5; i++){
-			bricks[i] = new itemRect(1.5 * step, 1.5 * step, randomInt(1.5 * step, x - 1.5 * step),
-			randomInt(step, y - step), "#000000", "brick");
+		for(var i = 0; i < 7; i++){
+			var locObj = utilGenerateLoc(bricks);
+			if(locObj)
+				bricks[i] = new itemRect(1.5 * step, 1.5 * step, locObj.x, locObj.y, "#000000", "brick");
+			else
+				bricks[i] = new itemRect(1.5 * step, 1.5 * step, randomInt(1.5 * step, x - 1.5 * step), randomInt(step, y - step), "#000000", "brick");
 		}
 		screenText = new itemRect(step, "Courier New", x - 6.2 * step, step, "#555555", "text");
 		scoreText = new itemRect(step, "Courier New", step / 5, step, "#555555", "text");
@@ -100,6 +108,11 @@ var gameScreen = {
 	stop : function(status = 0){
 		clearInterval(this.interval);
 		clearInterval(player.scoreInterval);
+		if(score > maxScore){
+			maxScore = score;
+			lsObj.maxScore = maxScore;
+			localStorage.setItem("BIHENASO", JSON.stringify(lsObj));
+		}
 		player = null;
 		line = null;
 		lineOn = false;
@@ -515,6 +528,29 @@ function formatScreen(){
 		ret += screen.toString();
 	}
 	return ret;
+}
+function generateLoc(list){
+	var x = randomInt(0.75 * step, window.x - 0.75* step);
+	var y = randomInt(0.75 * step, window.y - 0.75 * step);
+	var ret = true;
+	if(!list.length) return {"x" : x, "y" : y};
+	list.forEach(function(obj){
+		if(calDist(obj, {"x" : x, "y" : y}) < 1.5 * step)
+			ret = false;
+	});
+	if(ret)
+		return {"x" : x, "y" : y};
+	else
+		return null;
+}
+
+function utilGenerateLoc(list, t = 5){
+	var obj;
+	for(var i = 0; i < t; i++){
+		obj = generateLoc(list);
+		if(obj) break;
+	}
+	return obj;
 }
 
 startGame();

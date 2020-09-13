@@ -19,3 +19,7 @@ just 404 frames.
 ## Tips
 1. Try to get rid of gravity and go upstairs.
 2. Sometimes they work, usually they mess you up :).
+
+Made for Js13kGames competition, competition theme is "404".
+Also, reasonable people would use the entire 13kb **minified and zipped** limit.
+Reasonable people, not us, entire human-readable code with comments **and** this description totals under 13kb.
