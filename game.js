@@ -18,10 +18,10 @@ var screenText;
 var itemID = 0;
 var maxScore = JSON.parse(localStorage.getItem("BIHENASO")).maxScore;
 var maxScoreText;
-var instr = ["To play click grey square",
+var instr = ["To play click falling square",
 						 "and line to blue square.",
-						 "To see high score click grey square",
-						 "and line to blue square.",
+						 "To see high score click falling square",
+						 "and line to green square.",
 						 "Wait for grey squares",
 						 "to turn 90 degrees.",
 						 "If you want to stop its turn,", 
@@ -30,7 +30,7 @@ var instr = ["To play click grey square",
 						 "while playing."	
 						];
 var instrText = [];
-var xSpace = x - step * 17 >= 0 ? (x - step * 17) / 2 : 0;
+var xSpace = x - step * 18 >= 0 ? (x - step * 18) / 2 : 0;
 
 function slideScreen() {
 	if(line){
